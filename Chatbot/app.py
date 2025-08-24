@@ -10,8 +10,7 @@ chatbot = load_model()
 
 # -------- Streamlit UI --------
 st.set_page_config(page_title="Chatbot", page_icon="🤖", layout="centered")
-st.title("💬 Free AI Chatbot")
-st.write("Running on Hugging Face's BlenderBot (no paid keys needed).")
+st.title("💬 AI Chatbot")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -27,3 +26,4 @@ if user_input := st.chat_input("Type your message…"):
     response = chatbot(user_input, max_new_tokens=200)[0]["generated_text"]
     st.chat_message("assistant").markdown(response)
     st.session_state.messages.append((user_input, response))
+
