@@ -1,29 +1,33 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# -------- Load Model --------
 @st.cache_resource
-def load_model():
-    return pipeline("text2text-generation", model="facebook/blenderbot-400M-distill")
+def load_model(model_name):
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    return tokenizer, model
 
-chatbot = load_model()
-
-# -------- Streamlit UI --------
-st.set_page_config(page_title="Chatbot", page_icon="🤖", layout="centered")
+# Model selection UI
 st.title("💬 AI Chatbot")
+model_choice = st.selectbox("Choose a model:", [
+    "microsoft/DialoGPT-medium",
+    "facebook/blenderbot_small-90M"
+])
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+tokenizer, model = load_model(model_choice)
 
-# Display previous messages
-for user, bot in st.session_state.messages:
-    st.chat_message("user").markdown(user)
-    st.chat_message("assistant").markdown(bot)
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-# Input box
-if user_input := st.chat_input("Type your message…"):
-    st.chat_message("user").markdown(user_input)
-    response = chatbot(user_input, max_new_tokens=200)[0]["generated_text"]
-    st.chat_message("assistant").markdown(response)
-    st.session_state.messages.append((user_input, response))
+user_input = st.text_input("You: ")
 
+if user_input:
+    inputs = tokenizer.encode(user_input + tokenizer.eos_token, return_tensors="pt")
+    reply_ids = model.generate(inputs, max_length=200, pad_token_id=tokenizer.eos_token_id)
+    bot_reply = tokenizer.decode(reply_ids[:, inputs.shape[-1]:][0], skip_special_tokens=True)
+
+    st.session_state.chat_history.append(("You", user_input))
+    st.session_state.chat_history.append(("Bot", bot_reply))
+
+for speaker, msg in st.session_state.chat_history:
+    st.markdown(f"**{speaker}:** {msg}")
